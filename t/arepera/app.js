@@ -45,8 +45,8 @@ EU.alListo(function (sitio) {
   $("waShow").textContent = EU.telefonoVisible();
   const est = EU.estado();
   $("puntoEstado").classList.toggle("cerrado", !est.abierto);
-  $("openInfo").setAttribute("aria-label", est.texto + ". Ver horario, dirección y formas de pago");
-  $("info").innerHTML = EU.htmlInfo();
+  $("openInfo").setAttribute("aria-label", est.texto + ". Ver horario, dirección, redes y formas de pago");
+  $("info").innerHTML = EU.htmlInfo({ redes: false });
   if (c.negocio.descripcion) { $("infoDesc").textContent = c.negocio.descripcion; $("infoDesc").hidden = false; }
 
   /* ---------- Pedido del cliente (sobrevive si la página se recarga) ---------- */

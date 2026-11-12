@@ -85,6 +85,7 @@
         const b = enlace(def, obj);
         const inp = h("input", { class: "entrada", type: "text", id: idDe(def), value: b.get() == null ? "" : String(b.get()), maxlength: def.max || 200, placeholder: def.placeholder || "", autocomplete: "off" });
         if (def.ayuda) inp.setAttribute("aria-describedby", idDe(def) + "-ayuda");
+        if (def.usuario) { inp.setAttribute("autocapitalize", "none"); inp.setAttribute("autocorrect", "off"); inp.spellcheck = false; }
         const el = caja(def, inp);
         inp.addEventListener("input", () => { b.set(inp.value); el._error(""); cambio(def); });
         inp.addEventListener("blur", () => {

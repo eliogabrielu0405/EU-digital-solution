@@ -248,6 +248,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 .error{background:#FDE3DE;color:#8C2414;border-radius:12px;padding:10px 12px;font-weight:800}
 .cerrado-nota{background:var(--chip);border-radius:12px;padding:10px 12px;font-weight:700}
 .info-sheet .eu-info{grid-template-columns:1fr}
+.redes-hoja{margin:0 0 14px;color:var(--ink)}
+.redes-hoja .eu-red-pill{background:var(--chip);border-color:var(--line);border-width:2px}
 
 /* ---------- Celebración ---------- */
 .party{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--scrim);overflow:hidden;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
@@ -332,6 +334,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
   <div class="grab" aria-hidden="true"></div>
   <div class="sheet-head"><h2 id="infoTitle">El local</h2><button class="x" id="closeInfo" type="button" aria-label="Cerrar">✕</button></div>
   <p class="empty-note" id="infoDesc" hidden></p>
+  <div class="eu-redes redes-hoja" data-eu-redes="Síguenos"></div>
   <div id="info"></div>
 </section>
 

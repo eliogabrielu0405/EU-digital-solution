@@ -1609,11 +1609,6 @@ if (direccionCompleta) {
   $('#pie-direccion').replaceChildren(...[CONFIG.direccion, CONFIG.ciudad].filter(Boolean).flatMap((linea, i) => (i ? [el('br'), linea] : [linea])));
   $('#pie-mapa').href = CONFIG.mapa || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccionCompleta)}`;
 } else $('#bloque-ubicacion').hidden = true;
-if (CONFIG.instagram) {
-  const usuario = CONFIG.instagram.replace(/^@/, '');
-  $('#pie-instagram').textContent = `@${usuario}`;
-  $('#pie-instagram').href = `https://www.instagram.com/${encodeURIComponent(usuario)}/`;
-} else $('#bloque-instagram').hidden = true;
 for (const marca of $$('.marca')) marca.textContent = CONFIG.tienda;
 renderCategorias();
 renderDestacado();

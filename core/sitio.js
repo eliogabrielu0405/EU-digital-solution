@@ -111,8 +111,54 @@
   };
   EU.costoDelivery = () => Math.max(0, Number(EU.sitio.c.pedidos.delivery) || 0);
 
+  /* ---------- Redes sociales ---------- */
+  // Aceptan "@usuario", "usuario" o el enlace del perfil. Devuelve solo las que tienen algo.
+  const NO_ES_USUARIO = ["channel", "c", "user", "profile.php", "pages", "groups", "share", "p", "reel", "watch", "people"];
+  EU.redes = function () {
+    const n = (EU.sitio && EU.sitio.c.negocio) || {};
+    return (K.redes || []).map((r) => {
+      const v = String(n[r.id] || "").trim();
+      if (!v) return null;
+      let href = "", usuario = "";
+      if (/^(https?:\/\/|www\.)/i.test(v) || /^[\w-]+(\.[\w-]+)+\//.test(v)) {
+        href = EU.url(/^https?:/i.test(v) ? v : "https://" + v);
+        if (!href) return null;
+        try {
+          const seg = new URL(href).pathname.split("/").filter(Boolean)[0] || "";
+          if (/^@?[\w.-]+$/.test(seg) && !NO_ES_USUARIO.includes(seg.toLowerCase())) usuario = seg.replace(/^@/, "");
+        } catch (_) { /* enlace raro: se muestra sin usuario */ }
+      } else {
+        usuario = v.replace(/^@+/, "").replace(/\s+/g, "");
+        if (!usuario) return null;
+        href = r.base + encodeURIComponent(usuario);
+      }
+      return { id: r.id, nombre: r.nombre, corto: r.corto || r.nombre, href, usuario };
+    }).filter(Boolean);
+  };
+  // Fila de botones de redes. Instagram muestra el @ porque es por donde más los buscan.
+  EU.htmlRedes = function ({ titulo = "" } = {}) {
+    let lista = EU.redes(), muestra = false;
+    if (!lista.length && EU.sitio && EU.sitio.demo && !enPanel) {
+      lista = [{ id: "instagram", corto: "Instagram", usuario: "tunegocio" }, { id: "tiktok", corto: "TikTok" }, { id: "facebook", corto: "Facebook" }];
+      muestra = true;
+    }
+    if (!lista.length) return "";
+    const boton = (r) => {
+      const dentro = `<b>${EU.esc(r.corto)}</b>${r.id === "instagram" && r.usuario ? `<small>@${EU.esc(r.usuario)}</small>` : ""}`;
+      return muestra
+        ? `<span class="eu-red-pill">${dentro}</span>`
+        : `<a class="eu-red-pill" href="${EU.esc(r.href)}" target="_blank" rel="noopener">${dentro}</a>`;
+    };
+    return (titulo ? `<span class="eu-redes-tit">${EU.esc(titulo)}</span>` : "") + lista.map(boton).join("");
+  };
+  EU.pintarRedes = function (raiz = document) {
+    raiz.querySelectorAll("[data-eu-redes]").forEach((el) => {
+      el.innerHTML = EU.htmlRedes({ titulo: el.getAttribute("data-eu-redes") || "" });
+    });
+  };
+
   /* ---------- Bloque "El local": horario, dirección, redes y pagos ---------- */
-  EU.htmlInfo = function ({ titulo = "El local" } = {}) {
+  EU.htmlInfo = function ({ titulo = "El local", redes: conRedes = true } = {}) {
     const c = EU.sitio.c, n = c.negocio, est = EU.estado();
     const hoy = new Date().getDay();
     const H = n.horario || {};
@@ -123,13 +169,8 @@
     }).join("");
     const dir = [n.direccion, n.ciudad].filter(Boolean).join(", ");
     const mapa = EU.url(n.mapa) || (dir ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(dir) : "");
-    const red = (nombre, usuario, base) => {
-      if (!usuario) return "";
-      const u = String(usuario).trim();
-      const href = /^https?:\/\//i.test(u) ? EU.url(u) : base + encodeURIComponent(u.replace(/^@/, ""));
-      return href ? `<a class="eu-red" href="${EU.esc(href)}" target="_blank" rel="noopener"><b>${nombre}</b><span>${EU.esc(/^https?:/i.test(u) ? nombre : "@" + u.replace(/^@/, ""))}</span></a>` : "";
-    };
-    const redes = red("Instagram", n.instagram, "https://instagram.com/") + red("TikTok", n.tiktok, "https://www.tiktok.com/@") + red("Facebook", n.facebook, "https://facebook.com/");
+    const redes = !conRedes ? "" : EU.redes().map((r) =>
+      `<a class="eu-red" href="${EU.esc(r.href)}" target="_blank" rel="noopener"><b>${EU.esc(r.nombre)}</b><span>${EU.esc(r.usuario ? "@" + r.usuario : "Ver perfil")}</span></a>`).join("");
     const pagos = (c.pagos || []).filter((m) => m && m.nombre).map((m) => `<span class="eu-chip">${EU.esc(m.nombre)}</span>`).join("");
     return `<section class="eu-info" aria-label="${EU.esc(titulo)}">
       <div class="eu-info-col"><h3>Horario</h3><p class="eu-estado ${est.abierto ? "abierto" : "cerrado"}">${EU.esc(est.texto)}</p><div class="eu-horario">${filasHorario}</div></div>
@@ -391,6 +432,7 @@
     for (const fn of pendientes.splice(0)) {
       try { fn(sitio); } catch (err) { console.error(err); }
     }
+    EU.pintarRedes();
     animaciones(sitio.c);
     if (enPanel) {
       try {

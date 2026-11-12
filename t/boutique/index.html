@@ -208,7 +208,8 @@ a { color: inherit; }
 .pie-tit { font-family: var(--display); font-weight: 500; font-size: 20px; line-height: 1.2; color: var(--tinta); margin-bottom: 4px; }
 .pie address { font-style: normal; color: var(--tinta); }
 .pie-enlace { margin-top: 4px; color: var(--tinta); }
-.pie-arroba { color: var(--tinta); text-underline-offset: 3px; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+.pie-redes { margin-top: 6px; color: var(--tinta); }
+.pie-redes .eu-red-pill { border-width: 1px; }
 .pie-nota { font-size: 13px; margin-top: 36px; max-width: 60ch; }
 @media (min-width: 720px) { .pie-rejilla { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 40px; } }
 .seleccionable { -webkit-user-select: all; user-select: all; color: var(--tinta); font-variant-numeric: tabular-nums; }
@@ -431,12 +432,12 @@ a { color: inherit; }
           <a class="enlace pie-enlace" id="pie-mapa" href="https://www.google.com/maps" target="_blank" rel="noopener">Abrir en Google Maps</a>
         </div>
         <div class="pie-bloque">
-          <h2 class="pie-tit">Pedidos e Instagram</h2>
+          <h2 class="pie-tit">Pedidos y redes</h2>
           <p>WhatsApp: <span class="seleccionable" id="pie-whatsapp"></span></p>
-          <p id="bloque-instagram">Instagram: <a class="pie-arroba" id="pie-instagram" href="https://www.instagram.com/" target="_blank" rel="noopener"></a></p>
+          <div class="eu-redes pie-redes" data-eu-redes></div>
         </div>
       </div>
-      <p class="pie-nota" id="pie-nota" hidden>Tienda de muestra: el catálogo, los precios, la dirección y el Instagram son de ejemplo.</p>
+      <p class="pie-nota" id="pie-nota" hidden>Tienda de muestra: el catálogo, los precios, la dirección y las redes son de ejemplo.</p>
     </div>
   </footer>
 </main>

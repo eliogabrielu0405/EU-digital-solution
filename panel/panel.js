@@ -167,7 +167,7 @@
       return { id: s.id, titulo: s.titulo, intro: s.intro || "", hojas };
     });
     const negocio = {
-      id: "negocio", titulo: "Mi negocio", intro: "Nombre, logo, contacto, dirección y horario.",
+      id: "negocio", titulo: "Mi negocio", intro: "Nombre, logo, contacto, redes sociales, dirección y horario.",
       hojas: [
         { titulo: "Datos del negocio", campos: [
           { tipo: "texto", ruta: "$nombre", etiqueta: "Nombre del negocio", max: 60, requerido: true },
@@ -178,9 +178,10 @@
         { titulo: "Contacto", campos: [
           { tipo: "telefono", ruta: "negocio.whatsapp", etiqueta: "WhatsApp que recibe los pedidos", ayuda: "Con el código del país y sin el 0. Ej: 584141234567." },
           { tipo: "texto", ruta: "negocio.telefono", etiqueta: "Teléfono que se muestra (opcional)", max: 30, placeholder: "Ej: 0414-123-4567" },
-          { tipo: "texto", ruta: "negocio.instagram", etiqueta: "Instagram", max: 80, placeholder: "Ej: @minegocio" },
-          { tipo: "texto", ruta: "negocio.tiktok", etiqueta: "TikTok", max: 80, placeholder: "Ej: @minegocio" },
-          { tipo: "texto", ruta: "negocio.facebook", etiqueta: "Facebook", max: 120, placeholder: "Usuario o enlace de la página" },
+        ] },
+        { titulo: "Redes sociales", campos: [
+          { tipo: "nota", texto: "Escribe tu usuario o pega el enlace de tu perfil. Las que dejes vacías no salen en tu página." },
+          ...K.redes.map((r) => ({ tipo: "texto", ruta: "negocio." + r.id, etiqueta: r.nombre, max: 160, usuario: true, placeholder: r.id === "facebook" ? "Ej: minegocio o el enlace de la página" : "Ej: @minegocio" })),
         ] },
         { titulo: "Dirección", campos: [
           { tipo: "texto", ruta: "negocio.direccion", etiqueta: "Dirección", max: 140 },
