@@ -1494,6 +1494,12 @@ $('#enviar').addEventListener('click', (e) => {
   }
   if (primerError) { e.preventDefault(); primerError.focus(); return; }
   actualizarEnlace();
+  if (window.EU && window.EU.registrarPedido) {
+    window.EU.registrarPedido({
+      items: estado.carrito.map((item) => { const p = porId.get(item.id) || {}; return { nombre: p.nombre, cantidad: item.cantidad, precio: p.precio }; }),
+      total: totalPrecio(), tipo: entrega.nombre, pago: d.pago,
+    });
+  }
   setTimeout(() => { $('#enviado').hidden = false; $('#enviar').classList.add('enviar-hecho'); }, 400);
 });
 

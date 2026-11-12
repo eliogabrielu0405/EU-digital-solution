@@ -503,6 +503,13 @@ EU.alListo(function (sitio) {
       return;
     }
     $("sendWa").href = EU.wa(orderMessage());
+    EU.registrarPedido({
+      items: [
+        ...order.map((a) => ({ nombre: `${NOMBRE}: ${describe(a)}`, cantidad: 1, precio: priceOf(a) })),
+        ...Object.entries(drinks).filter(([id]) => DRINK[id]).map(([id, n]) => ({ nombre: DRINK[id].nombre, cantidad: n, precio: DRINK[id].precio })),
+      ],
+      total: grandTotal(), tipo: (TIPOS.find((t) => t.id === tipoActual()) || {}).nombre, pago,
+    });
     flash(`Se abrió WhatsApp con tu pedido. Si no se abrió, cópialo y envíalo al ${EU.telefonoVisible()}.`, 7000);
   });
   $("copy").addEventListener("click", () => {

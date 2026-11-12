@@ -155,6 +155,11 @@ EU.alListo(function (sitio) {
       const err = validar();
       if (err) { e.preventDefault(); $("#error").textContent = err; $("#error").hidden = false; return; }
       armarEnlace();
+      const t = TIPOS.find((x) => x.id === tipoActual());
+      EU.registrarPedido({
+        items: [...carrito].map(([id, n]) => { const p = buscar(id) || {}; return { nombre: p.nombre, cantidad: n, precio: p.precio }; }),
+        total: total(), tipo: t && t.nombre, pago,
+      });
       return;
     }
     if (el.dataset.add) {

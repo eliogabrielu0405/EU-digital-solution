@@ -14,6 +14,7 @@
     sitio: null, cuenta: null, pagos: [], ajustes: {}, P: null,
     borrador: null, nombre: "", guardado: "", seccion: "hoy", subiendo: 0, subidas: new Set(),
     editor: null, vistaPendiente: false, guardando: false,
+    resumen: null, resumenT: 0, resumenError: "",
   };
 
   /* ---------- Utilidades ---------- */
@@ -193,7 +194,7 @@
       ],
     };
     const pedidos = {
-      id: "pedidos", titulo: P.sinTipos ? "Pagos" : "Pedidos y pagos", intro: "Cómo te piden y cómo te pagan.",
+      id: "pedidos", titulo: P.sinTipos ? "Pagos" : "Entregas y pagos", intro: "Cómo te piden y cómo te pagan.",
       hojas: [
         ...(P.sinTipos ? [] : [{ titulo: "Pedidos", campos: [
           { tipo: "multi", ruta: "pedidos.tipos", etiqueta: "Cómo pueden pedir", minimo: 1, opciones: [{ id: "delivery", nombre: "Delivery" }, { id: "llevar", nombre: "Para llevar" }, { id: "aqui", nombre: "Comer en el local" }] },
@@ -246,8 +247,15 @@
         ...((P.apariencia || []).length ? [{ titulo: "Detalles de tu plantilla", campos: P.apariencia }] : []),
       ],
     };
-    return [hoy, ...propias, negocio, pedidos, apariencia, { id: "suscripcion", titulo: "Mi suscripción", intro: "Tu plan, cómo pagar y tu contraseña.", especial: true }];
+    return [
+      hoy,
+      { id: "pedidos-recibidos", titulo: "Mis pedidos", intro: "Los pedidos que te mandan desde tu página.", especial: "pedidos" },
+      ...propias, negocio, pedidos, apariencia,
+      { id: "compartir", titulo: "Compartir", intro: "Tu enlace, cómo se ve en WhatsApp y tu código QR.", especial: "compartir" },
+      { id: "suscripcion", titulo: "Mi suscripción", intro: "Tu plan, cómo pagar y tu contraseña.", especial: "suscripcion" },
+    ];
   }
+  function irA(id) { S.seccion = id; pintarNav(); pintarSeccion(); scrollTo({ top: 0, behavior: EU.reducido ? "auto" : "smooth" }); }
 
   /* ---------- Pantalla principal ---------- */
   let refs = {};
@@ -294,6 +302,7 @@
     pintarNav();
     pintarSeccion();
     pintarBarra();
+    setTimeout(tarjetaInicial, 2500);
   }
 
   function pintarNav() {
@@ -301,7 +310,7 @@
     refs.nav.replaceChildren(...secciones().map((s) => h("button", {
       type: "button", "aria-current": s.id === S.seccion ? "page" : null,
       onclick: () => { S.seccion = s.id; pintarNav(); pintarSeccion(); scrollTo({ top: 0, behavior: EU.reducido ? "auto" : "smooth" }); },
-    }, s.titulo, s.id === "suscripcion" && est.id !== "activa" ? h("span", { class: "punto", "aria-label": "Revisa" }) : null)));
+    }, s.titulo, s.especial === "suscripcion" && est.id !== "activa" ? h("span", { class: "punto", "aria-label": "Revisa" }) : null)));
     const act = refs.nav.querySelector('[aria-current="page"]');
     if (act) act.scrollIntoView({ block: "nearest", inline: "center" });
   }
@@ -315,9 +324,12 @@
     const est = EU.estadoCuenta(S.sitio, S.cuenta, S.ajustes.diasGracia);
     if (est.id !== "activa" && s.id !== "suscripcion") {
       cont.push(h("p", { class: "banda " + (est.tono === "rojo" ? "rojo" : "ambar") }, est.texto + " ",
-        h("button", { class: "btn btn-plano btn-chico", type: "button", onclick: () => { S.seccion = "suscripcion"; pintarNav(); pintarSeccion(); } }, "Ver cómo pagar")));
+        h("button", { class: "btn btn-plano btn-chico", type: "button", onclick: () => irA("suscripcion") }, "Ver cómo pagar")));
     }
-    if (s.especial) cont.push(...pintarSuscripcion());
+    if (s.id === "hoy") cont.push(resumenHoy());
+    if (s.especial === "suscripcion") cont.push(...pintarSuscripcion());
+    else if (s.especial === "pedidos") cont.push(...pintarPedidos());
+    else if (s.especial === "compartir") cont.push(...pintarCompartir());
     else s.hojas.forEach((hj) => cont.push(h("section", { class: "hoja" },
       hj.titulo ? h("div", { class: "hoja-cab" }, h("h2", {}, hj.titulo), hj.ayuda ? h("p", {}, hj.ayuda) : null) : null,
       S.editor.campos(hj.campos))));
@@ -392,6 +404,8 @@
     if (tam > 580000) { EU.aviso("Tu página tiene demasiada información para guardarla. Borra algunos productos o textos largos.", true); return; }
     S.guardando = true; refs.guardar.textContent = "Guardando"; pintarBarra();
     try {
+      S.nombre = nombre;
+      await prepararTarjeta();
       const filas = await api.actualizar("eu_sitios", "id=eq." + S.sitio.id, { nombre, contenido });
       if (!filas || !filas.length) throw new Error("No se pudo guardar. Sal y vuelve a entrar.");
       S.sitio = Object.assign({}, S.sitio, filas[0]);
@@ -419,6 +433,199 @@
   }
 
   addEventListener("beforeunload", (e) => { if (S.borrador && (sucio() || S.subiendo)) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- Tarjeta para WhatsApp ----------
+     Se dibuja con el nombre, el logo, una foto y los colores, y se sube como JPG. La página pública
+     la usa cuando alguien comparte el enlace. Solo se rehace cuando cambia algo de eso. */
+  async function prepararTarjeta() {
+    try {
+      if (!EU.datosTarjeta) return;
+      const d = EU.datosTarjeta({ nombre: S.nombre, plantilla: S.P, contenido: S.borrador });
+      const firmaT = JSON.stringify(d);
+      const actual = S.borrador.compartir || {};
+      if (actual.imagen && actual.firma === firmaT) return;
+      const blob = await Promise.race([EU.tarjetaJPG(d), new Promise((_, mal) => setTimeout(() => mal(new Error("lento")), 9000))]);
+      const ruta = S.sitio.id + "/compartir-" + EU.idNuevo() + ".jpg";
+      await api.subir("eu-media", ruta, blob);
+      S.subidas.add(ruta);
+      S.borrador.compartir = { imagen: api.urlPublica("eu-media", ruta), firma: firmaT };
+    } catch (_) { /* sin tarjeta nueva: WhatsApp muestra la anterior o solo el texto */ }
+  }
+  // Las páginas que todavía no tienen tarjeta la reciben la primera vez que el dueño abre el panel
+  async function tarjetaInicial() {
+    if (!S.borrador || S.guardando || sucio() || S.respaldo || (S.borrador.compartir && S.borrador.compartir.imagen)) return;
+    const previo = S.borrador.compartir;
+    await prepararTarjeta();
+    const nueva = S.borrador.compartir;
+    if (!nueva || nueva === previo || S.guardando) return;
+    S.borrador.compartir = previo;
+    const limpio = !sucio();
+    S.borrador.compartir = nueva;
+    if (!limpio) { pintarBarra(); return; } // se guarda junto con los cambios que está haciendo
+    try {
+      const filas = await api.actualizar("eu_sitios", "id=eq." + S.sitio.id, { contenido: S.borrador });
+      if (filas && filas[0]) { S.sitio = Object.assign({}, S.sitio, filas[0]); S.guardado = firma(); }
+    } catch (_) { /* se intenta de nuevo al guardar */ }
+    pintarBarra();
+  }
+
+  /* ---------- Mis pedidos ---------- */
+  const cuantos = (n, uno, varios) => n + " " + (n === 1 ? uno : varios);
+  async function cargarResumen(forzar) {
+    if (!forzar && S.resumen && Date.now() - S.resumenT < 60000) return S.resumen;
+    try {
+      S.resumen = await api.rpc("eu_resumen_pedidos", { p_sitio: S.sitio.id });
+      S.resumenT = Date.now(); S.resumenError = "";
+    } catch (err) {
+      if (err.status === 401) { EU.aviso("Tu sesión venció. Vuelve a entrar.", true); }
+      S.resumenError = err.message || "No se pudo cargar.";
+    }
+    return S.resumen;
+  }
+  function cifra(etiqueta, x, extra) {
+    const n = Number(x && x.n) || 0;
+    return h("div", { class: "cifra" },
+      h("span", {}, etiqueta),
+      h("b", {}, String(n)),
+      h("small", {}, cuantos(n, "pedido", "pedidos").replace(/^\d+ /, "") + " · " + EU.usd(Number(x && x.total) || 0)),
+      extra || null);
+  }
+  function resumenHoy() {
+    const caja = h("section", { class: "hoja resumen-hoy", hidden: true });
+    cargarResumen().then((r) => {
+      if (!r) return;
+      caja.replaceChildren(
+        h("div", { class: "hoja-fila" }, h("h2", {}, "Pedidos por tu página"),
+          h("button", { class: "btn btn-sec btn-chico", type: "button", onclick: () => irA("pedidos-recibidos") }, "Ver mis pedidos")),
+        h("div", { class: "cifras" }, cifra("Hoy", r.hoy), cifra("Este mes", r.mes)));
+      caja.hidden = false;
+    });
+    return caja;
+  }
+  function cuandoFue(iso) {
+    const d = new Date(iso);
+    const dia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(d);
+    const hoy = EU.hoyISO();
+    const ayer = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Caracas" }).format(new Date(Date.now() - 86400000));
+    const hora = d.toLocaleTimeString("es-VE", { hour: "numeric", minute: "2-digit", timeZone: "America/Caracas" });
+    if (dia === hoy) return "Hoy, " + hora;
+    if (dia === ayer) return "Ayer, " + hora;
+    return EU.fechaHora(iso);
+  }
+  function pintarPedidos() {
+    const cuerpo = h("div", { class: "pedidos-cuerpo" }, h("section", { class: "hoja" }, h("p", { class: "suave" }, h("span", { class: "punto-carga" }), "Cargando tus pedidos")));
+    const actualizar = h("button", { class: "btn btn-sec btn-chico", type: "button" }, "Actualizar");
+    actualizar.addEventListener("click", async () => { actualizar.disabled = true; await cargarResumen(true); actualizar.disabled = false; llenar(); });
+    async function llenar() {
+      const r = await cargarResumen();
+      if (S.seccion !== "pedidos-recibidos") return;
+      if (!r) {
+        cuerpo.replaceChildren(h("section", { class: "hoja" }, h("p", { class: "banda rojo" }, "No pudimos cargar tus pedidos. " + (S.resumenError || "")),
+          h("div", { class: "acciones" }, actualizar)));
+        return;
+      }
+      if (!Number(r.historico)) {
+        cuerpo.replaceChildren(h("section", { class: "hoja vacio-pedidos" },
+          h("h2", {}, "Todavía no te han llegado pedidos por tu página"),
+          h("p", { class: "suave" }, "Cuando un cliente mande su pedido a tu WhatsApp desde tu página, aquí ves cuántos pedidos tienes, cuánto suman y lo que más te piden."),
+          h("p", { class: "suave" }, "Para que empiecen a llegar, pon tu enlace en tu Instagram y en tus estados de WhatsApp."),
+          h("div", { class: "acciones" }, h("button", { class: "btn", type: "button", onclick: () => irA("compartir") }, "Compartir mi página"), actualizar)));
+        return;
+      }
+      const mp = Number(r.mesPasado && r.mesPasado.n) || 0, mn = Number(r.mes && r.mes.n) || 0;
+      const comparar = mp ? h("em", { class: mn >= mp ? "sube" : "baja" }, (mn >= mp ? "+" : "") + Math.round(((mn - mp) / mp) * 100) + "% que el mes pasado") : null;
+      const partes = [];
+      partes.push(h("section", { class: "hoja" },
+        h("div", { class: "hoja-fila" }, h("h2", {}, "Resumen"), actualizar),
+        h("div", { class: "cifras tres" }, cifra("Hoy", r.hoy), cifra("Últimos 7 días", r.semana), cifra("Este mes", r.mes, comparar))));
+
+      const dias = r.dias || [];
+      const max = Math.max(1, ...dias.map((x) => Number(x.n) || 0));
+      const hoy = EU.hoyISO();
+      const nombreDia = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("es-VE", { weekday: "short", day: "numeric" });
+      partes.push(h("section", { class: "hoja" },
+        h("div", { class: "hoja-cab" }, h("h2", {}, "Pedidos por día"), h("p", {}, "Las últimas dos semanas.")),
+        h("div", { class: "barras", role: "img", "aria-label": "Pedidos por día: " + dias.map((x) => nombreDia(x.dia) + ", " + cuantos(Number(x.n) || 0, "pedido", "pedidos")).join("; ") },
+          dias.map((x) => {
+            const n = Number(x.n) || 0;
+            return h("div", { class: "barra-dia" + (x.dia === hoy ? " hoy" : ""), title: nombreDia(x.dia) + ": " + cuantos(n, "pedido", "pedidos") + ", " + EU.usd(Number(x.total) || 0) },
+              h("span", { class: "barra-n" }, n ? String(n) : ""),
+              h("i", { style: "height:" + Math.max(n ? 6 : 2, Math.round((n / max) * 100)) + "%" }),
+              h("small", {}, String(Number(x.dia.slice(8)))));
+          }))));
+
+      const top = r.top || [];
+      if (top.length) {
+        partes.push(h("section", { class: "hoja" },
+          h("div", { class: "hoja-cab" }, h("h2", {}, "Lo que más te piden"), h("p", {}, "En los últimos 30 días.")),
+          h("ol", { class: "top-lista" }, top.map((t) => h("li", {},
+            h("span", { class: "top-nombre" }, t.nombre),
+            h("b", {}, "× " + t.cantidad),
+            h("span", { class: "suave" }, EU.usd(Number(t.total) || 0)))))));
+      }
+      const tipos = Object.entries(r.tipos || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+      const totalTipos = tipos.reduce((s, [, n]) => s + n, 0);
+      if (tipos.length > 1) {
+        partes.push(h("section", { class: "hoja" },
+          h("div", { class: "hoja-cab" }, h("h2", {}, "Cómo te piden"), h("p", {}, "En los últimos 30 días.")),
+          h("div", { class: "chips" }, tipos.map(([t, n]) => h("span", { class: "chip" }, (t === "otro" ? "Sin indicar" : t) + " · " + Math.round((n / totalTipos) * 100) + "%")))));
+      }
+      partes.push(h("section", { class: "hoja" },
+        h("div", { class: "hoja-cab" }, h("h2", {}, "Últimos pedidos")),
+        h("div", { class: "lista-pedidos" }, (r.ultimos || []).map((p) => h("div", { class: "pedido-fila" },
+          h("div", { class: "pedido-txt" },
+            h("b", {}, (p.items || []).map((it) => it.cantidad + " " + it.nombre).join(", ")),
+            h("span", { class: "suave" }, [cuandoFue(p.creado), p.tipo, p.pago].filter(Boolean).join(" · "))),
+          h("b", { class: "pedido-total" }, EU.usd(Number(p.total) || 0))))),
+        h("p", { class: "suave chico" }, "Aquí cuentan los pedidos que tus clientes mandaron a tu WhatsApp desde tu página. Si alguno no terminó de enviarlo, igual aparece. Se guardan los productos y el total, no los datos del cliente.")));
+      cuerpo.replaceChildren(...partes);
+    }
+    llenar();
+    return [cuerpo];
+  }
+
+  /* ---------- Compartir ---------- */
+  function pintarCompartir() {
+    const enlace = enlacePagina();
+    const d = EU.datosTarjeta({ nombre: S.nombre, plantilla: S.P, contenido: S.borrador });
+    const out = [];
+
+    const copiar = h("button", { class: "btn btn-sec", type: "button" }, "Copiar enlace");
+    copiar.addEventListener("click", () => EU.copiar(enlace, copiar));
+    const compartir = navigator.share ? h("button", { class: "btn", type: "button" }, "Compartir") : null;
+    if (compartir) compartir.addEventListener("click", () => navigator.share({ title: S.nombre, text: (d.frase ? d.frase + " " : "") + "Haz tu pedido aquí:", url: enlace }).catch(() => { /* lo cerró */ }));
+    out.push(h("section", { class: "hoja" },
+      h("div", { class: "hoja-cab" }, h("h2", {}, "Tu enlace"), h("p", {}, "Ponlo en la biografía de tu Instagram, en tus estados de WhatsApp y en tus publicaciones.")),
+      h("p", { class: "enlace-caja" }, enlace.replace(/^https?:\/\//, "")),
+      h("div", { class: "acciones" }, compartir, copiar, h("a", { class: "btn btn-sec", href: enlace, target: "_blank", rel: "noopener" }, "Abrir mi página"))));
+
+    const imagen = h("div", { class: "wa-imagen" }, h("span", { class: "suave chico" }, "Preparando la vista"));
+    EU.dibujarTarjeta(d).then((cv) => { cv.setAttribute("aria-hidden", "true"); imagen.replaceChildren(cv); }).catch(() => { imagen.hidden = true; });
+    out.push(h("section", { class: "hoja" },
+      h("div", { class: "hoja-cab" }, h("h2", {}, "Así se ve en WhatsApp"), h("p", {}, "Cuando mandas tu enlace, sale esta tarjeta con tu nombre, tu logo, una foto y tus colores. Se actualiza cada vez que guardas.")),
+      h("div", { class: "wa-chat" }, h("div", { class: "wa-burbuja" },
+        imagen,
+        h("div", { class: "wa-texto" }, h("b", {}, d.nombre || "Tu negocio"), h("span", {}, d.frase || "Haz tu pedido en línea y envíalo por WhatsApp."), h("small", {}, location.host)),
+        h("p", { class: "wa-enlace" }, enlace))),
+      sucio() ? h("p", { class: "banda ambar" }, "Tienes cambios sin guardar. Tus clientes ven la tarjeta nueva cuando guardas.") : null));
+
+    const qr = EU.dibujarQR(enlace, { tam: 330, margen: 3 });
+    qr.className = "qr-vista"; qr.setAttribute("role", "img"); qr.setAttribute("aria-label", "Código QR de tu página");
+    const cartel = h("button", { class: "btn", type: "button" }, "Descargar cartel para imprimir");
+    cartel.addEventListener("click", async () => {
+      cartel.disabled = true; cartel.textContent = "Preparando";
+      try { await EU.descargarCanvas(await EU.dibujarCartelQR(d, enlace), "cartel-qr-" + S.sitio.slug + ".png"); }
+      catch (_) { EU.aviso("No se pudo preparar el cartel. Prueba de nuevo.", true); }
+      cartel.disabled = false; cartel.textContent = "Descargar cartel para imprimir";
+    });
+    const soloQR = h("button", { class: "btn btn-sec", type: "button" }, "Descargar solo el código");
+    soloQR.addEventListener("click", () => EU.descargarCanvas(EU.dibujarQR(enlace, { tam: 1200, margen: 4 }), "qr-" + S.sitio.slug + ".png"));
+    out.push(h("section", { class: "hoja" },
+      h("div", { class: "hoja-cab" }, h("h2", {}, "Código QR"), h("p", {}, "Imprímelo y ponlo en tus mesas, el mostrador, tus bolsas o tus volantes. Al escanearlo con la cámara, abren tu página.")),
+      h("div", { class: "qr-fila" }, qr, h("div", { class: "qr-botones" }, cartel, soloQR,
+        h("p", { class: "suave chico" }, "El cartel trae tu nombre, tu logo y el código listo para imprimir en media hoja.")))));
+    return out;
+  }
 
   /* ---------- Mi suscripción ---------- */
   function pintarSuscripcion() {

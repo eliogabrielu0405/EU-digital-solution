@@ -242,6 +242,8 @@ EU.alListo(function (sitio) {
     const f = falta();
     if (!cuenta() || f) { renderEstadoEnvio(); return; }
     if (EU.enPanel) { aviso("En la vista previa no se envían pedidos."); return; }
+    const t = tiposOfrecidos.find((x) => x.id === tipo) || TIPOS[1];
+    EU.registrarPedido({ items: lineas().map((l) => ({ nombre: l.nombre, cantidad: l.cant, precio: l.precio })), total: total(), tipo: t && t.nombre, pago });
     window.open(EU.wa(mensaje()), "_blank", "noopener");
   });
 

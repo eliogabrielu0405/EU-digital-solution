@@ -500,6 +500,10 @@ EU.alListo(function (sitio) {
     $("#formErr").hidden = !miss; $("#formErr").textContent = miss;
     if (miss) { e.preventDefault(); $("#formErr").scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" }); return; }
     updateMsg();
+    EU.registrarPedido({
+      items: cart.map((x) => ({ nombre: x.kind === "drink" ? x.name : `${x.name} (${sizeName(x)})`, cantidad: x.qty, precio: x.unit })),
+      total: total(), tipo: (MODOS.find((m) => m[0] === modo) || [])[1], pago,
+    });
   });
   $("#copyMsg").onclick = async () => {
     try { await navigator.clipboard.writeText(buildMsg()); toast("Mensaje copiado"); }

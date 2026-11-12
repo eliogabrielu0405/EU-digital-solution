@@ -111,6 +111,40 @@
   };
   EU.costoDelivery = () => Math.max(0, Number(EU.sitio.c.pedidos.delivery) || 0);
 
+  /* ---------- Registro de pedidos para las estadísticas del panel del dueño ----------
+     Cada plantilla lo llama justo antes de abrir WhatsApp. Solo guarda productos, total,
+     tipo de entrega y forma de pago. Si falla, el pedido sigue su camino igual. */
+  EU.registrarPedido = function ({ items = [], total = 0, tipo = "", pago = "" } = {}) {
+    try {
+      const s = EU.sitio;
+      if (!s || s.demo || !s.id || enPanel) return;
+      const lista = (items || []).filter((it) => it && String(it.nombre || "").trim()).slice(0, 60).map((it) => ({
+        nombre: String(it.nombre).trim().slice(0, 120),
+        cantidad: Math.max(1, Math.round(Number(it.cantidad) || 1)),
+        precio: Math.max(0, Math.round((Number(it.precio) || 0) * 100) / 100),
+      }));
+      if (!lista.length) return;
+      const metodo = (s.c.pagos || []).find((m) => m && m.id === pago);
+      const datos = {
+        p_sitio: s.id, p_items: lista, p_total: Math.max(0, Math.round((Number(total) || 0) * 100) / 100),
+        p_tipo: String(tipo || "").slice(0, 40) || null, p_pago: String((metodo && metodo.nombre) || pago || "").slice(0, 60) || null,
+      };
+      // Si el cliente toca "enviar" dos veces con el mismo pedido, cuenta una sola vez
+      const huella = JSON.stringify([lista, datos.p_total, datos.p_tipo]);
+      try {
+        const clave = "eu:pedido:" + s.id;
+        const antes = JSON.parse(sessionStorage.getItem(clave) || "null");
+        if (antes && antes.h === huella && Date.now() - antes.t < 10 * 60000) return;
+        sessionStorage.setItem(clave, JSON.stringify({ h: huella, t: Date.now() }));
+      } catch (_) { /* sin almacenamiento: se registra igual */ }
+      fetch(BASE + "/rest/v1/rpc/eu_registrar_pedido", {
+        method: "POST", keepalive: true,
+        headers: { apikey: C.supabaseKey, Authorization: "Bearer " + C.supabaseKey, "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      }).catch(() => { /* sin conexión: no pasa nada */ });
+    } catch (_) { /* las estadísticas nunca deben estorbar un pedido */ }
+  };
+
   /* ---------- Redes sociales ---------- */
   // Aceptan "@usuario", "usuario" o el enlace del perfil. Devuelve solo las que tienen algo.
   const NO_ES_USUARIO = ["channel", "c", "user", "profile.php", "pages", "groups", "share", "p", "reel", "watch", "people"];

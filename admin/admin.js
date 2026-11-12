@@ -302,6 +302,7 @@
         copiarBtn(enlaceSitio(s), "Copiar enlace"),
         copiarBtn(enlacePanel(s), "Copiar enlace del panel"),
         c.telefono ? h("a", { class: "btn btn-sec btn-chico", href: wa(c.telefono, recordatorio(s)), target: "_blank", rel: "noopener" }, "Recordarle el pago") : null),
+      pedidosDelCliente(s),
       seccionRegistrarPago(s),
       seccionCuenta(s),
       h("section", { class: "campos" },
@@ -316,6 +317,21 @@
       h("section", { class: "campos" },
         h("h3", { style: "font-size:17px" }, "Pagos de este cliente"),
         pagosCliente.length ? h("div", {}, pagosCliente.map((p) => lineaPago(p, false))) : h("p", { class: "suave" }, "Sin pagos registrados.")));
+  }
+
+  // Cuántos pedidos le llegan por su página: sirve para mostrarle al cliente lo que gana con la suscripción
+  function pedidosDelCliente(s) {
+    const caja = h("p", { class: "banda azul", hidden: true });
+    api.rpc("eu_resumen_pedidos", { p_sitio: s.id }).then((r) => {
+      if (!r) return;
+      const n = (x) => Number(x && x.n) || 0;
+      const total = Number(r.historico) || 0;
+      caja.textContent = total
+        ? "Pedidos por su página: " + n(r.mes) + " este mes (" + EU.usd(Number(r.mes && r.mes.total) || 0) + "), " + n(r.semana) + " en los últimos 7 días y " + total + " en total."
+        : "Todavía no le han llegado pedidos por su página.";
+      caja.hidden = false;
+    }).catch(() => { /* sin datos de pedidos: no se muestra */ });
+    return caja;
   }
 
   function seccionRegistrarPago(s) {
