@@ -144,7 +144,8 @@
     const n = (params.get("n") || params.get("negocio") || "").trim().toLowerCase();
     if (n) return { slug: n };
     const host = location.hostname.toLowerCase();
-    if (!host || host === "localhost" || host === "127.0.0.1" || /\.(workers|pages)\.dev$/.test(host)) return null;
+    /* Las direcciones gratis de Cloudflare, Vercel y Netlify son de la plataforma, no de un cliente. */
+    if (!host || host === "localhost" || host === "127.0.0.1" || /\.((workers|pages)\.dev|vercel\.app|netlify\.app)$/.test(host)) return null;
     if (C.dominioBase) {
       if (host === C.dominioBase || host === "www." + C.dominioBase) return null;
       if (host.endsWith("." + C.dominioBase)) {
