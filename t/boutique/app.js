@@ -1379,6 +1379,7 @@ function agregarAlCarrito(p, color, talla) {
   else estado.carrito.push({ id: p.id, color, talla, cantidad: 1 });
   pedirFoto(p, color, true);
   cambioCarrito();
+  if (window.EU && window.EU.mascotaBrinca) window.EU.mascotaBrinca();
 }
 
 function cambioCarrito() {

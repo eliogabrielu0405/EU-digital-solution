@@ -21,7 +21,7 @@
     nombreDemo: "Pizzería La Bailarina",
     vistaPrevia: "/t/pizzeria/vista.webp",
     varFuente: "--display",
-    tieneMascota: true,
+    mascota: "pizza",
     galeria: GALERIA,
     temas: [
       { id: "napoles", nombre: "Nápoles", muestra: ["#d7262b", "#f5c451", "#f3f5f1"] },

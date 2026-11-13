@@ -378,7 +378,6 @@
   function animaciones(c) {
     const a = c.animaciones || {}, raiz = document.documentElement;
     raiz.classList.add("eu-logo-" + (a.logo || "ninguna"), "eu-boton-" + (a.boton || "ninguna"));
-    if (a.mascota === false) raiz.classList.add("eu-sin-mascota");
     if (reducido) return;
     const portada = document.querySelector("[data-eu-portada]");
     if (portada && a.portada && a.portada !== "ninguna" && (PARTICULAS[a.portada] || a.portada === "emojis")) {
@@ -410,6 +409,43 @@
       new MutationObserver(() => marcar(document)).observe(document.body, { childList: true, subtree: true });
     }
   }
+
+  /* ---------- Mascota bailarina ----------
+     El dueño elige el personaje y el baile en su panel. Las plantillas con un lugar propio para ella
+     lo marcan con data-eu-mascota; en las demás sale flotando en una esquina. */
+  EU.mascota = function () {
+    const M = window.EU_MASCOTAS, s = EU.sitio;
+    if (!M || !s) return null;
+    const a = s.c.animaciones || {};
+    let personaje = a.personaje || (a.mascota === false ? "ninguna" : P.mascota || (s.demo && !enPanel ? P.mascotaDemo : "") || "ninguna");
+    if (!M.existe(personaje)) personaje = "ninguna";
+    return { personaje, baile: M.hayBaile(a.baile) ? a.baile : "meneo" };
+  };
+  EU.pintarMascotas = function () {
+    const m = EU.mascota(), M = window.EU_MASCOTAS, raiz = document.documentElement;
+    if (!m || m.personaje === "ninguna") { raiz.classList.add("eu-sin-mascota"); return; }
+    let lugares = [...document.querySelectorAll("[data-eu-mascota]")];
+    if (!lugares.length) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "eu-mascota-flota"; b.setAttribute("data-eu-mascota", "");
+      b.setAttribute("aria-label", "Mascota bailarina, tócala para que salte");
+      document.body.appendChild(b);
+      lugares = [b];
+    }
+    lugares.forEach((el) => {
+      el.classList.add("eu-mascota", "eu-baile-" + m.baile);
+      if (el instanceof SVGElement) { el.setAttribute("viewBox", "0 0 200 220"); el.innerHTML = M.interior(m.personaje); }
+      else el.innerHTML = M.svg(m.personaje);
+    });
+  };
+  // Tres saltos de fiesta: al tocarla y cuando el cliente agrega algo al pedido
+  EU.mascotaBrinca = function () {
+    document.querySelectorAll("[data-eu-mascota]").forEach((el) => {
+      el.classList.remove("eu-m-brinca"); void el.getBoundingClientRect(); el.classList.add("eu-m-brinca");
+      clearTimeout(el._euBrinca); el._euBrinca = setTimeout(() => el.classList.remove("eu-m-brinca"), 1600);
+    });
+  };
+  document.addEventListener("click", (e) => { if (e.target.closest("button[data-eu-mascota]:not([data-dancer])")) EU.mascotaBrinca(); });
 
   /* ---------- Copiar datos de pago ---------- */
   document.addEventListener("click", async (e) => {
@@ -467,6 +503,7 @@
       try { fn(sitio); } catch (err) { console.error(err); }
     }
     EU.pintarRedes();
+    EU.pintarMascotas();
     animaciones(sitio.c);
     if (enPanel) {
       try {

@@ -75,6 +75,8 @@
       S.P = (window.EU_PLANTILLAS || {})[S.sitio.plantilla];
       if (!S.P) throw new Error("No encontramos la plantilla de tu página. Escríbele a EU Digital.");
       S.borrador = K.combinar(S.P.defaults, S.sitio.contenido || {});
+    ponerMascota(S.borrador, S.P);
+      ponerMascota(S.borrador, S.P);
       S.nombre = S.sitio.nombre;
       S.guardado = firma();
       recuperarBorrador();
@@ -238,7 +240,11 @@
           { tipo: "selector", ruta: "animaciones.productos", etiqueta: "Cómo aparecen los productos", opciones: K.productos, lista: true },
           { tipo: "selector", ruta: "animaciones.boton", etiqueta: "Animación del botón principal", opciones: K.boton, lista: true },
           { tipo: "selector", ruta: "animaciones.temporada", etiqueta: "Decoración de temporada", opciones: K.temporada, lista: true, ayuda: "Agrega nieve, confeti o corazones y un saludo arriba de la página." },
-          ...(P.tieneMascota ? [{ tipo: "interruptor", ruta: "animaciones.mascota", etiqueta: "Mostrar la mascota bailarina" }] : []),
+        ] },
+        { titulo: "Mascota bailarina", campos: [
+          { tipo: "nota", texto: "Un personaje que baila en tu página y salta cuando tus clientes agregan algo al pedido." },
+          { tipo: "mascotas", ruta: "animaciones.personaje", rutaBaile: "animaciones.baile", etiqueta: "Personaje" },
+          { tipo: "selector", ruta: "animaciones.baile", etiqueta: "Baile", opciones: window.EU_MASCOTAS.bailes, lista: true, si: { ruta: "animaciones.personaje", distinto: "ninguna" } },
         ] },
         { titulo: "Cinta de promoción", campos: [
           { tipo: "texto", ruta: "banner.texto", etiqueta: "Texto", max: 90, placeholder: "Ej: Martes de 2x1 en hamburguesas", ayuda: "Sale en una cinta de color arriba de tu página. Déjalo vacío para quitarla." },
@@ -254,6 +260,13 @@
       { id: "compartir", titulo: "Compartir", intro: "Tu enlace, cómo se ve en WhatsApp y tu código QR.", especial: "compartir" },
       { id: "suscripcion", titulo: "Mi suscripción", intro: "Tu plan, cómo pagar y tu contraseña.", especial: "suscripcion" },
     ];
+  }
+  // El personaje guardado manda. Las páginas de antes solo tenían un interruptor: se traduce a la lista nueva.
+  function ponerMascota(b, P) {
+    const a = (b.animaciones = b.animaciones || {});
+    if (!a.personaje || !window.EU_MASCOTAS.existe(a.personaje)) a.personaje = a.personaje === "ninguna" || a.mascota === false ? "ninguna" : P.mascota || "ninguna";
+    if (!window.EU_MASCOTAS.hayBaile(a.baile)) a.baile = "meneo";
+    a.mascota = true;
   }
   function irA(id) { S.seccion = id; pintarNav(); pintarSeccion(); scrollTo({ top: 0, behavior: EU.reducido ? "auto" : "smooth" }); }
 
@@ -350,6 +363,7 @@
     const ruta = (def && (def.ruta || "")) || "";
     if (ruta.startsWith("tema.") || (def && def.tipo === "temas")) enviarTema();
     else if (!(extra && extra.vivo)) recargarVista();
+    if (ruta === "animaciones.baile") document.querySelectorAll(".mascotas").forEach((c) => c._repintar && c._repintar());
     if (ruta === "negocio.logo") refs.logo.src = EU.url(S.borrador.negocio.logo) || "/img/favicon.svg";
     pintarBarra();
     respaldar();
@@ -425,6 +439,7 @@
   function descartar() {
     if (!confirm("¿Descartar los cambios que no has guardado?")) return;
     S.borrador = K.combinar(S.P.defaults, S.sitio.contenido || {});
+    ponerMascota(S.borrador, S.P);
     S.nombre = S.sitio.nombre;
     refs.nombre.textContent = S.nombre;
     try { localStorage.removeItem(llaveBorrador()); } catch (_) { /* nada */ }

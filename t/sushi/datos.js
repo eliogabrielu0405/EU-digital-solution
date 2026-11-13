@@ -6,6 +6,7 @@
     nombre: "Sushi bar",
     rubro: "Comida japonesa",
     descripcion: "Menú por categorías con fotos, carrito y pedido por WhatsApp. Estilo japonés con pétalos de sakura.",
+    mascotaDemo: "sushi",
     nombreDemo: "Sakura Sushi",
     vistaPrevia: "/t/sushi/vista.webp",
     varFuente: "--f-display",

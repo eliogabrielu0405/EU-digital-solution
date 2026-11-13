@@ -272,3 +272,12 @@ dialog.modal::backdrop { background: rgba(25, 32, 43, .5); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Selector de mascota */
+.mascotas { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.mascota-op { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; border: 1.5px solid var(--linea); border-radius: 12px; background: var(--papel); font-weight: 700; font-size: 14px; line-height: 1.2; text-align: center; overflow: hidden; }
+.mascota-op[aria-pressed="true"] { border-color: var(--carbon); box-shadow: 0 0 0 3px var(--carbon-suave); }
+.mascota-op .eu-mascota, .mascota-op .mascota-nada { display: block; width: 64px; height: 70px; }
+.mascota-op .mascota-nada { border-radius: 50%; height: 64px; margin: 3px 0; border: 2px dashed var(--linea); background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--linea) calc(50% - 1.5px), var(--linea) calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+/* En la lista solo baila la elegida, para no marear */
+.mascota-op:not([aria-pressed="true"]):not(:hover) .eu-mascota * { animation-play-state: paused; }

@@ -12,6 +12,7 @@
     nombre: "Burgers y perros",
     rubro: "Comida rápida",
     descripcion: "Estilo cartel con bordes de sticker, una hamburguesa que se abre capa por capa al bajar, menú por categorías y pedido por WhatsApp.",
+    mascotaDemo: "hamburguesa",
     nombreDemo: "Papi Burgers",
     vistaPrevia: "/t/burgers/vista.webp",
     varFuente: "--f-brush",

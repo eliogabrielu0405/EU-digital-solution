@@ -53,6 +53,13 @@ En el panel del cliente, **Compartir** tiene:
 
 La vista previa también funciona en Facebook, Instagram, Telegram y X. La portada y las demos tienen su propia tarjeta (están en `img/compartir.jpg` y `t/<plantilla>/compartir.jpg`; se hacen con `tools/tarjetas.html`).
 
+## Mascota bailarina
+
+En el panel del cliente, **Apariencia > Mascota bailarina**: elige entre 19 personajes (arepa, pizza, hamburguesa, perro caliente, papas, refresco, sushi, nigiri, taco, empanada, tequeño, dona, helado, cupcake, café, bolsa de compras, vestido, corazón y estrella) y 10 bailes. La mascota salta cuando el cliente final agrega algo al pedido o la toca.
+
+- En la arepera y la pizzería viene encendida (arepa y pizza). En burgers, sushi y boutique viene apagada; cada cliente la enciende si quiere.
+- Los personajes están en `core/mascotas.js` y los bailes en `core/mascotas.css`. Para verlos todos juntos: `tools/mascotas.html`.
+
 ## Pagos y suspensiones
 
 - Cuando un cliente reporta un pago en su panel, te aparece en **Pagos** con la referencia y la captura. **Aprobar** corre su fecha de corte los meses que pagó y, si estaba suspendida, la reactiva.

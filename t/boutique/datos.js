@@ -30,6 +30,7 @@
     nombre: "Boutique",
     rubro: "Tienda de ropa",
     descripcion: "Catálogo de ropa con probador 360: cada prenda gira en 3D o con tus fotos. Tallas, colores, carrito y pedido por WhatsApp.",
+    mascotaDemo: "bolsa",
     nombreDemo: "Lazo",
     vistaPrevia: "/t/boutique/vista.webp",
     varFuente: "--display",

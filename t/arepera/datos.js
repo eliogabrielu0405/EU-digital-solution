@@ -21,7 +21,7 @@
     nombreDemo: "Arma tu Arepa",
     vistaPrevia: "/t/arepera/vista.webp",
     varFuente: "--display",
-    tieneMascota: true,
+    mascota: "arepa",
     galeria: GALERIA,
     temas: [
       { id: "sol", nombre: "Sol", muestra: ["#FFF7DD", "#2F8F4E", "#FFC63F"] },

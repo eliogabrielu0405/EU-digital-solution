@@ -151,6 +151,7 @@ EU.alListo(function (sitio) {
     if (!el) return;
     if (el.hasAttribute("data-cerrar")) { cerrarCarrito(); return; }
     if (el.hasAttribute("data-abrir")) { abrirCarrito(); return; }
+    if (el.hasAttribute("data-add")) EU.mascotaBrinca();
     if (el.id === "enviar") {
       const err = validar();
       if (err) { e.preventDefault(); $("#error").textContent = err; $("#error").hidden = false; return; }
@@ -198,7 +199,7 @@ EU.alListo(function (sitio) {
         const id = en.target.id.replace("cat-", "");
         document.querySelectorAll(".tab").forEach((tb) => tb.setAttribute("aria-pressed", tb.dataset.cat === id));
         const act = document.querySelector(`.tab[data-cat="${CSS.escape(id)}"]`);
-        if (act) act.parentElement.scrollTo({ left: act.offsetLeft - 16, behavior: "smooth" });
+        if (act) act.parentElement.scrollTo({ left: act.offsetLeft - act.parentElement.offsetLeft - 16, behavior: EU.reducido ? "auto" : "smooth" });
       });
     }, { rootMargin: "-40% 0px -55% 0px" });
     setTimeout(() => document.querySelectorAll("section.cat").forEach((s) => obs.observe(s)), 0);

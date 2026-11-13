@@ -421,6 +421,26 @@
         return el;
       },
 
+      // Mascota bailarina: una cuadrícula con todos los personajes bailando el baile elegido
+      mascotas(def) {
+        const M = window.EU_MASCOTAS, b = enlace(def);
+        const baile = () => EU.obtener(op.raiz(), def.rutaBaile) || "meneo";
+        const cont = h("div", { class: "mascotas", role: "group", "aria-label": def.etiqueta });
+        const opciones = [{ id: "ninguna", nombre: "Sin mascota" }, ...M.personajes];
+        const pintar = () => cont.querySelectorAll(".mascota-op").forEach((x, i) => {
+          x.setAttribute("aria-pressed", String((b.get() || "ninguna") === opciones[i].id));
+          const d = x.querySelector(".eu-mascota"); if (d) d.className = "eu-mascota eu-baile-" + baile();
+        });
+        opciones.forEach((o) => {
+          const dibujo = h("span", { class: "eu-mascota", "aria-hidden": "true" });
+          if (o.id === "ninguna") dibujo.className = "mascota-nada"; else dibujo.innerHTML = M.svg(o.id);
+          cont.append(h("button", { class: "mascota-op", type: "button", onclick: () => { b.set(o.id); pintar(); cambio(def); } }, dibujo, h("span", {}, o.nombre)));
+        });
+        pintar();
+        cont._repintar = pintar;
+        return caja(def, cont, { legend: true });
+      },
+
       temas(def) {
         const temas = (op.plantilla && op.plantilla.temas) || [];
         const b = enlace({ ruta: "tema.preset" });

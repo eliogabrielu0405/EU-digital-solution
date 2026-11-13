@@ -182,6 +182,7 @@ EU.alListo(function (sitio) {
     const p = buscar(id);
     if (!p) return;
     if (d > 0 && !sePuede(p)) return;
+    if (d > 0) EU.mascotaBrinca();
     const n = (qty[id] || 0) + d;
     if (n > 0) qty[id] = Math.min(99, n); else delete qty[id];
     actualizarProducto(id);

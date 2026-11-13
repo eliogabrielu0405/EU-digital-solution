@@ -112,7 +112,7 @@ window.EU_CATALOGOS = {
     tasa: { valor: 0, fecha: "" },
     hoy: { cerrado: false, aviso: "" },
     tema: { preset: "", colores: { principal: "", acento: "", fondo: "" }, fuente: "", modo: "" },
-    animaciones: { portada: "ninguna", emoji: "", logo: "ninguna", productos: "subir", boton: "ninguna", temporada: "ninguna", mascota: true },
+    animaciones: { portada: "ninguna", emoji: "", logo: "ninguna", productos: "subir", boton: "ninguna", temporada: "ninguna", mascota: true, personaje: "", baile: "meneo" },
     banner: { texto: "", estilo: "fijo" },
   };
 })(window.EU_CATALOGOS);
