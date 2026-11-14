@@ -70,6 +70,8 @@
       D.pagos = pagos || [];
       D.notas = Object.fromEntries((notas || []).map((n) => [n.sitio_id, n]));
       D.ajustes = (ajustes && ajustes[0] && ajustes[0].datos) || {};
+      await revisarAvisos();
+      if (location.hash === "#pagos") { D.seccion = "pagos"; history.replaceState(null, "", location.pathname + location.search); }
       pintar();
     } catch (err) {
       if (err.status === 401) { await api.salir(); return pantallaEntrada("Tu sesión venció. Vuelve a entrar."); }
@@ -132,6 +134,7 @@
         cifra(cuenta.porvencer, "Vencen en 5 días", cuenta.porvencer ? "ambar" : "", () => irA("clientes", "porvencer")),
         cifra(cuenta.vencida, "Vencidas", cuenta.vencida ? "rojo" : "", () => irA("clientes", "vencidas")),
         cifra(cuenta.suspendida, "Suspendidas", "", () => irA("clientes", "suspendidas"))),
+      ...[invitarAvisos()].filter(Boolean),
       h("section", { class: "hoja" },
         h("div", { class: "hoja-cab" }, h("h2", {}, "Cobrado este mes"), h("p", {}, "Pagos aprobados desde el día 1.")),
         h("div", { class: "talon-fila", style: "display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end" },
@@ -627,6 +630,7 @@
       boton.disabled = false; boton.textContent = "Guardar ajustes";
     });
     return [titulo("Ajustes", "Tus datos, tus precios y cómo te pagan."),
+      ...(C.avisos ? [seccionAvisos()] : []),
       h("section", { class: "hoja" }, h("div", { class: "hoja-cab" }, h("h2", {}, "Tu marca")),
         ed.campos([
           { tipo: "texto", ruta: "marca", etiqueta: "Nombre de tu marca", max: 60 },
@@ -649,6 +653,127 @@
           ] }])),
       h("div", {}, boton)];
   }
+
+  /* ---------- Avisos al teléfono ----------
+     El navegador se suscribe al servicio de avisos (Web Push) y la suscripción se guarda en eu_avisos.
+     Cuando un cliente reporta un pago, la función eu-avisos le manda la notificación a cada dispositivo. */
+  const AV = {
+    soportado: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+    ios: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
+    instalada: matchMedia("(display-mode: standalone)").matches || navigator.standalone === true,
+    activo: false,
+  };
+  const bytesDe = (b64u) => {
+    const t = String(b64u).replace(/-/g, "+").replace(/_/g, "/");
+    return Uint8Array.from(atob(t + "=".repeat((4 - (t.length % 4)) % 4)), (c) => c.charCodeAt(0));
+  };
+  function nombreDispositivo() {
+    const u = navigator.userAgent;
+    const so = /Android/.test(u) ? "Android" : AV.ios ? "iPhone o iPad" : /Windows/.test(u) ? "Windows" : /Mac OS X/.test(u) ? "Mac" : /Linux/.test(u) ? "Linux" : "Otro equipo";
+    const nav = /Edg\//.test(u) ? "Edge" : /OPR\//.test(u) ? "Opera" : /SamsungBrowser/.test(u) ? "Samsung Internet" : /Firefox\//.test(u) ? "Firefox" : /Chrome\//.test(u) ? "Chrome" : /Safari\//.test(u) ? "Safari" : "navegador";
+    return so + " · " + nav;
+  }
+  async function suscripcionActual() {
+    const reg = await navigator.serviceWorker.getRegistration("/admin/");
+    return reg ? reg.pushManager.getSubscription() : null;
+  }
+  async function revisarAvisos() {
+    AV.activo = false;
+    if (!AV.soportado) return false;
+    try { AV.activo = Notification.permission === "granted" && !!(await suscripcionActual()); } catch (_) { /* sin avisos */ }
+    return AV.activo;
+  }
+  async function activarAvisos() {
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      throw new Error(permiso === "denied"
+        ? "Este navegador tiene bloqueados los avisos de esta página. Toca el candado junto a la dirección, permite las notificaciones y prueba de nuevo."
+        : "No diste permiso para los avisos.");
+    }
+    const reg = await navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/" });
+    await navigator.serviceWorker.ready;
+    const { clave } = await api.funcion("eu-avisos", { accion: "clave" });
+    const llave = bytesDe(clave);
+    let sub = await reg.pushManager.getSubscription();
+    // Una suscripción hecha con otra clave ya no sirve: se rehace
+    const vieja = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+    if (sub && vieja && (vieja.length !== llave.length || vieja.some((b, i) => b !== llave[i]))) { await sub.unsubscribe(); sub = null; }
+    if (!sub) {
+      try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: llave }); }
+      catch (_) { throw new Error("Este navegador no pudo conectarse al servicio de avisos. Revisa tu internet o prueba con Chrome."); }
+    }
+    const j = sub.toJSON();
+    await api.guardarFila("eu_avisos", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, dispositivo: nombreDispositivo() }, "endpoint");
+    AV.activo = true;
+  }
+  async function desactivarAvisos() {
+    const sub = await suscripcionActual();
+    if (sub) {
+      await api.borrar("eu_avisos", "endpoint=eq." + encodeURIComponent(sub.endpoint)).catch(() => { /* ya no estaba */ });
+      await sub.unsubscribe();
+    }
+    AV.activo = false;
+  }
+  async function probarAviso() {
+    const r = await api.funcion("eu-avisos", { accion: "prueba" });
+    if (r && r.enviados > 0) EU.aviso("Aviso de prueba enviado. Te llega en unos segundos.");
+    else if (r && !r.dispositivos) EU.aviso("No quedó ningún dispositivo con avisos. Actívalos de nuevo.", true);
+    else EU.aviso("El servicio de avisos no aceptó el envío. Desactiva los avisos y vuelve a activarlos.", true);
+  }
+  // Botón que hace algo y vuelve a pintar; mientras tanto se bloquea para no repetir el toque
+  function botonAviso(texto, clase, accion, despues) {
+    const b = h("button", { class: "btn " + (clase || ""), type: "button" }, texto);
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await accion(); } catch (err) { EU.aviso(err.message || "No se pudo.", true); }
+      b.disabled = false;
+      if (despues) despues();
+    });
+    return b;
+  }
+  // Invitación en el Resumen mientras este dispositivo no tenga los avisos
+  function invitarAvisos() {
+    if (!C.avisos || !AV.soportado || AV.activo) return null;
+    return h("section", { class: "hoja aviso-invita" },
+      h("div", { class: "hoja-cab" }, h("h2", {}, "Entérate al momento cuando te paguen"),
+        h("p", {}, "Activa los avisos y te llega una notificación a este dispositivo cada vez que un cliente reporta un pago.")),
+      h("div", { class: "acciones" }, botonAviso("Activar avisos", "", async () => { await activarAvisos(); EU.aviso("Avisos activados en este dispositivo."); }, pintarSeccion)));
+  }
+  function seccionAvisos() {
+    const caja = h("section", { class: "hoja" });
+    const cab = h("div", { class: "hoja-cab" }, h("h2", {}, "Avisos de pagos"),
+      h("p", {}, "Una notificación en tu teléfono o computadora cada vez que un cliente reporta un pago, aunque tengas el panel cerrado."));
+    async function llenar() {
+      if (!AV.soportado) {
+        caja.replaceChildren(cab, h("p", { class: "banda ambar" }, AV.ios && !AV.instalada
+          ? "En iPhone, primero agrega este panel a tu pantalla de inicio: toca Compartir y luego \"Agregar a inicio\". Ábrelo desde ese ícono y vuelve a esta sección."
+          : "Este navegador no puede recibir avisos. Abre el panel con Chrome."));
+        return;
+      }
+      await revisarAvisos();
+      let lista = [];
+      try { lista = (await api.select("eu_avisos", "select=id,dispositivo,creado&order=creado.desc")) || []; } catch (_) { /* se muestra sin la lista */ }
+      const estado = AV.activo
+        ? h("p", { class: "banda verde" }, "Los avisos están activados en este dispositivo.")
+        : h("p", { class: "banda azul" }, lista.length ? "En este dispositivo no están activados." : "Todavía no los activas en ningún dispositivo.");
+      const botones = AV.activo
+        ? [botonAviso("Mandar aviso de prueba", "", probarAviso, llenar), botonAviso("Desactivar aquí", "btn-sec", async () => { await desactivarAvisos(); EU.aviso("Avisos desactivados en este dispositivo."); }, llenar)]
+        : [botonAviso("Activar avisos", "", async () => { await activarAvisos(); EU.aviso("Avisos activados en este dispositivo."); }, llenar)];
+      caja.replaceChildren(cab, estado, h("div", { class: "acciones" }, botones),
+        lista.length ? h("p", { class: "suave chico" }, "Dispositivos con avisos: " + lista.map((x) => (x.dispositivo || "Dispositivo") + " (desde el " + EU.fecha(x.creado) + ")").join(", ") + ".") : null,
+        h("p", { class: "suave chico" }, "Actívalos en cada dispositivo donde quieras recibirlos. En el teléfono, usa Chrome y deja que la página muestre notificaciones."));
+    }
+    llenar();
+    return caja;
+  }
+  // Al tocar una notificación con el panel abierto, el aviso manda directo a Pagos con los datos al día
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (e) => {
+      if (!e.data || e.data.eu !== "aviso") return;
+      if (api.conectado) { D.seccion = "pagos"; cargar(); }
+    });
+  }
+  addEventListener("hashchange", () => { if (location.hash === "#pagos" && api.conectado) cargar(); });
 
   /* ---------- Arranque ---------- */
   EU.reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;

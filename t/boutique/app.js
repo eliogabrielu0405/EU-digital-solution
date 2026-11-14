@@ -1147,15 +1147,23 @@ const probadorDestacado = crearProbador($('#probador-destacado'), { alTocar: () 
 const probadorFicha = crearProbador($('#probador-ficha'));
 
 async function iniciarMotor() {
+  // El motor 3D va guardado en la propia página (vendor/). Si no baja es por la conexión;
+  // si baja pero no arranca, es que el teléfono no puede dibujar en 3D.
+  let bajo = false;
   try {
     const [THREE, { RoomEnvironment }] = await Promise.all([import('three'), import('three/addons/environments/RoomEnvironment.js')]);
+    bajo = true;
     motor = crearMotor(THREE, RoomEnvironment);
     escenario = motor.crearEscenario();
   } catch (error) {
     console.error(error);
+    motor = null;
+    const texto = bajo
+      ? 'Este teléfono no puede mostrar la vista 360. Igual puedes ver los colores, elegir tu talla y pedir.'
+      : 'La vista 360 no cargó. Revisa tu conexión y vuelve a abrir la página.';
     for (const escena of $$('.escena')) {
       escena.dataset.estado = 'error';
-      escena.append(el('p', { class: 'escena-aviso' }, 'La vista 360 no cargó. Revisa tu conexión y vuelve a abrir la página.'));
+      escena.append(el('p', { class: 'escena-aviso' }, texto));
     }
     for (const img of $$('img[data-foto]')) img.closest('.foto')?.classList.add('sin-foto');
     return;

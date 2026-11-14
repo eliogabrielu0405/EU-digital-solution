@@ -729,15 +729,37 @@
         }
         const fila = { sitio_id: S.sitio.id, monto: d.monto, moneda: d.moneda, metodo: String(d.metodo).slice(0, 40), referencia: d.referencia.trim() || null, meses: Number(d.meses) || 1, nota: d.nota.trim() || null, comprobante, creado_por: api.sesion.uid };
         const r = await api.insertar("eu_pagos", fila);
-        S.pagos.unshift((r && r[0]) || Object.assign({ estado: "pendiente", creado: new Date().toISOString() }, fila));
-        EU.aviso("Pago enviado. Te avisamos cuando lo revisemos.");
+        const nuevo = (r && r[0]) || Object.assign({ estado: "pendiente", creado: new Date().toISOString() }, fila);
+        S.pagos.unshift(nuevo);
+        // Aviso al teléfono de EU Digital. Si no sale, el pago igual queda en su lista de pendientes.
+        if (C.avisos && nuevo.id) api.funcion("eu-avisos", { accion: "pago", pago: nuevo.id }).catch(() => { /* sin aviso */ });
         pintarSeccion();
+        pagoEnviado(nuevo);
       } catch (err) {
         error.textContent = err.message || "No se pudo enviar el pago."; error.hidden = false;
         boton.disabled = false; boton.textContent = "Enviar reporte de pago";
       }
     });
     return form;
+  }
+
+  // Confirmación del reporte, con la opción de avisar también por WhatsApp
+  function pagoEnviado(p) {
+    const monto = p.moneda === "VES" ? "Bs " + EU.fmtBs.format(p.monto) : EU.usd(p.monto);
+    const meses = Number(p.meses) || 1;
+    const texto = "Hola, soy de " + S.nombre + " (" + S.sitio.slug + "). Acabo de reportar en mi panel un pago de " + monto + " por " + p.metodo +
+      (p.referencia ? ", referencia " + p.referencia : "") + ", por " + meses + (meses === 1 ? " mes" : " meses") + ".";
+    EU.modal({
+      titulo: "Recibimos tu reporte de pago",
+      construir(m) {
+        m.cuerpo.append(
+          h("p", {}, "Tu pago ya está en la lista de " + (S.ajustes.marca || C.marca || "EU Digital") + ". Cuando lo revisen, tu fecha de corte se corre sola."),
+          h("p", { class: "suave" }, "Si tienes apuro, escríbeles también por WhatsApp con los datos del pago ya escritos."));
+        m.pie.append(
+          h("button", { class: "btn btn-sec", type: "button", onclick: m.cerrar }, "Cerrar"),
+          h("a", { class: "btn", href: waEU(texto), target: "_blank", rel: "noopener", onclick: m.cerrar }, "Avisar por WhatsApp"));
+      },
+    });
   }
 
   function formularioClave() {

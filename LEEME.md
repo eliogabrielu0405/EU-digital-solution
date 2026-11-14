@@ -60,6 +60,17 @@ En el panel del cliente, **Apariencia > Mascota bailarina**: elige entre 19 pers
 - En la arepera y la pizzería viene encendida (arepa y pizza). En burgers, sushi y boutique viene apagada; cada cliente la enciende si quiere.
 - Los personajes están en `core/mascotas.js` y los bailes en `core/mascotas.css`. Para verlos todos juntos: `tools/mascotas.html`.
 
+## Avisos cuando te reportan un pago
+
+Cuando un cliente reporta un pago en su panel pasan dos cosas:
+
+- Le sale una confirmación con el botón **Avisar por WhatsApp**, que te abre un mensaje con el negocio, el monto, la forma de pago y la referencia ya escritos.
+- A ti te llega una notificación al teléfono o a la computadora ("Pago reportado: Pizzería Luigi, $10.00 por Pago Móvil"), aunque tengas el panel cerrado. Al tocarla se abre tu panel en **Pagos**.
+
+Para recibir las notificaciones, entra a tu panel desde cada dispositivo donde las quieras y toca **Activar avisos** (está en **Resumen** y en **Ajustes > Avisos de pagos**). En Ajustes también puedes mandarte un aviso de prueba y desactivarlos. En el teléfono usa Chrome; en iPhone hay que agregar primero el panel a la pantalla de inicio.
+
+Cómo está hecho: la función `eu-avisos` de Supabase (`supabase/functions/eu-avisos/`) manda las notificaciones; los dispositivos se guardan en la tabla `eu_avisos` (`sql/2026-11-13_avisos.sql`). Las notificaciones se encienden con `avisos: true` en `core/config.js`; mientras esté en `false`, el panel no las ofrece.
+
 ## Pagos y suspensiones
 
 - Cuando un cliente reporta un pago en su panel, te aparece en **Pagos** con la referencia y la captura. **Aprobar** corre su fecha de corte los meses que pagó y, si estaba suspendida, la reactiva.
@@ -91,4 +102,6 @@ El plan gratis pausa el proyecto si pasa una semana sin visitas y no guarda copi
 - `middleware.js`: arma la vista previa cuando se comparte un enlace.
 - `img/`: el ícono de EU Digital y la tarjeta de la portada.
 - `sql/`: los cambios de la base de datos (ya están aplicados).
+- `supabase/functions/`: las funciones que corren en Supabase (ya están instaladas allá); no se publican en Vercel.
+- `t/boutique/vendor/`: el motor de la vista 360 (three.js 0.169, licencia MIT), guardado en la propia página para no depender de otro servicio.
 - `tools/`: herramientas internas; no se publican.

@@ -574,7 +574,8 @@ a { color: inherit; }
 </dialog>
 
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<!-- El motor 3D (three.js 0.169, licencia MIT) va guardado en la propia página, en vendor/, para no depender de otro servicio. -->
+<script type="importmap">{"imports":{"three":"/t/boutique/vendor/three-0.169.0.module.min.js","three/addons/":"/t/boutique/vendor/"}}</script>
 <script src="/core/config.js"></script>
 <script src="/core/catalogos.js"></script>
 <script src="/t/boutique/datos.js"></script>
