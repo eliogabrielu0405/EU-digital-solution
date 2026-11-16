@@ -6,6 +6,7 @@
 //   { accion: "clave" }            solo admin: la clave pública para suscribir un dispositivo
 //   { accion: "prueba" }           solo admin: manda un aviso de prueba a sus dispositivos
 //   { accion: "pago", pago: id }   dueño de la página o admin: avisa de ese pago (una sola vez)
+//   { accion: "registro" }         quien se acaba de registrar: avisa de su cuenta nueva (una sola vez)
 //
 // No usa librerías: el cifrado (RFC 8291, aes128gcm) y la firma VAPID (RFC 8292) van con WebCrypto.
 
@@ -17,6 +18,8 @@ const CONTACTO = Deno.env.get("EU_AVISOS_CONTACTO") || "https://eu-digital-solut
 
 const txt = new TextEncoder();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PLANTILLAS = { pizzeria: "Pizzería", arepera: "Arepera", burgers: "Burgers y perros", sushi: "Sushi bar", boutique: "Boutique" };
+const PLANES = { basico: "Básico", premium: "Premium" };
 const SERVICIOS = /(^|\.)(fcm\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com|push\.samsungosp\.com)$/;
 
 export const b64 = {
@@ -178,7 +181,7 @@ export async function atender(req) {
     if (b.accion === "pago") {
       const id = String(b.pago || "");
       if (!UUID.test(id)) return responder({ error: "Falta el pago" }, 400);
-      const p = (await db("eu_pagos?select=id,sitio_id,monto,moneda,metodo,referencia,meses,estado,avisado&id=eq." + id))[0];
+      const p = (await db("eu_pagos?select=id,sitio_id,monto,moneda,metodo,referencia,meses,plan,ciclo,estado,avisado&id=eq." + id))[0];
       if (!p) return responder({ error: "Ese pago no existe" }, 404);
       const s = (await db("eu_sitios?select=nombre,dueno&id=eq." + p.sitio_id))[0];
       if (!s || (!esAdmin && s.dueno !== uid)) return responder({ error: "No autorizado" }, 403);
@@ -189,9 +192,24 @@ export async function atender(req) {
       const monto = p.moneda === "VES"
         ? "Bs " + Number(p.monto).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : "$" + Number(p.monto).toFixed(2);
-      const texto = [monto + " por " + p.metodo, p.referencia ? "Ref. " + p.referencia : "", p.meses + (Number(p.meses) === 1 ? " mes" : " meses")].filter(Boolean).join(" · ");
+      const tiempo = p.ciclo === "anual" ? "1 año" : p.meses + (Number(p.meses) === 1 ? " mes" : " meses");
+      const texto = [monto + " por " + p.metodo, p.referencia ? "Ref. " + p.referencia : "", (PLANES[p.plan] ? "Plan " + PLANES[p.plan] + ", " : "") + tiempo].filter(Boolean).join(" · ");
       const subs = await db("eu_avisos?select=id,endpoint,p256dh,auth");
       return responder(await repartir(subs, { titulo: "Pago reportado: " + s.nombre, texto, url: "/admin/#pagos", tag: "pago-" + id }));
+    }
+
+    if (b.accion === "registro") {
+      // Solo la cuenta de quien llama, y solo si se registró sola desde la portada
+      const s = (await db("eu_sitios?select=id,nombre,slug,plantilla&principal=is.null&dueno=eq." + uid + "&limit=1"))[0];
+      if (!s) return responder({ error: "No encontramos tu cuenta" }, 404);
+      const c = (await db("eu_cuentas?select=origen,aviso_alta,vence&sitio_id=eq." + s.id))[0];
+      if (!c || c.origen !== "registro" || c.aviso_alta) return responder({ enviados: 0, repetido: true });
+      const marcado = await db("eu_cuentas?sitio_id=eq." + s.id + "&aviso_alta=is.null&select=sitio_id", { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ aviso_alta: new Date().toISOString() }) });
+      if (!marcado.length) return responder({ enviados: 0, repetido: true });
+      const hasta = c.vence ? new Date(c.vence + "T12:00:00Z").toLocaleDateString("es-VE", { day: "numeric", month: "long", timeZone: "UTC" }) : "";
+      const texto = [PLANTILLAS[s.plantilla] || s.plantilla, "Usuario " + s.slug, hasta ? "Prueba gratis hasta el " + hasta : "Prueba gratis"].join(" · ");
+      const subs = await db("eu_avisos?select=id,endpoint,p256dh,auth");
+      return responder(await repartir(subs, { titulo: "Nuevo registro: " + s.nombre, texto, url: "/admin/#clientes", tag: "registro-" + s.id }));
     }
 
     return responder({ error: "Acción desconocida" }, 400);

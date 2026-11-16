@@ -320,9 +320,8 @@
     caja.className = "eu-tiras";
     const est = EU.estado();
     let html = "";
-    if (EU.sitio.demo && !enPanel && C.whatsappMarca) {
-      const txt = "Hola, vi la plantilla " + (P.nombre || "") + " y quiero una página así para mi negocio.";
-      html += `<div class="eu-tira eu-tira-demo">Esta es una página de muestra de ${EU.esc(C.marca || "EU Digital")}. <a href="https://wa.me/${EU.soloNumeros(C.whatsappMarca)}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Quiero una así</a></div>`;
+    if (EU.sitio.demo && !enPanel) {
+      html += `<div class="eu-tira eu-tira-demo">Esta es una página de muestra de ${EU.esc(C.marca || "EU Digital")}. <a href="/registro/?plantilla=${encodeURIComponent(PLANTILLA)}">Pruébala gratis con tu negocio</a></div>`;
     }
     if (!est.abierto) html += `<div class="eu-tira eu-tira-cerrado" role="status"><b>${EU.esc(est.texto)}.</b> Puedes dejar tu pedido y te respondemos apenas abramos.</div>`;
     if (c.hoy.aviso) html += `<div class="eu-tira eu-tira-aviso" role="status">${EU.esc(c.hoy.aviso)}</div>`;

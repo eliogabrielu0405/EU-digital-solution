@@ -7,6 +7,11 @@
 <meta name="robots" content="noindex">
 <title>Panel de mi página</title>
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/panel/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/img/icono-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi página">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap">
@@ -126,6 +131,30 @@
 .qr-fila { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
 .qr-vista { width: 180px; height: 180px; border-radius: 12px; border: 1.5px solid var(--linea-2); image-rendering: pixelated; flex: none; }
 .qr-botones { display: flex; flex-direction: column; align-items: stretch; gap: 10px; flex: 1 1 220px; min-width: 0; }
+
+/* Mis páginas, planes y la app */
+button.pnl-marca-btn { border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; border-radius: 10px; }
+button.pnl-marca-btn span { color: var(--carbon); font-weight: 700; }
+.talon-precio { margin-top: 4px; font-weight: 700; color: var(--suave); font-variant-numeric: tabular-nums; }
+.paginas { display: flex; flex-direction: column; }
+.pagina { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 10px 14px; align-items: start; padding: 14px 0; border-top: 1px dashed var(--linea); }
+.pagina:first-child { border-top: 0; padding-top: 0; }
+.pagina:last-child { padding-bottom: 0; }
+.pagina > img { width: 56px; height: 74px; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--linea-2); background: var(--papel-2); }
+.pagina-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pagina-txt h3 { font-size: 18px; overflow-wrap: anywhere; }
+.pagina-enlace { font-size: 14px; overflow-wrap: anywhere; }
+.pagina > .acciones { grid-column: 1 / -1; }
+.pagina .chip { min-height: 36px; font-size: 14px; border-style: dashed; color: var(--suave); }
+.app-invita { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px 14px; align-items: center; }
+.app-invita > img { border-radius: 12px; }
+.app-invita > .acciones { grid-column: 1 / -1; }
+@media (min-width: 620px) {
+  .pagina { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .pagina > .acciones { grid-column: auto; justify-content: flex-end; max-width: 300px; }
+  .app-invita { grid-template-columns: 52px minmax(0, 1fr) auto; }
+  .app-invita > .acciones { grid-column: auto; }
+}
 </style>
 </head>
 <body class="pnl">
@@ -139,6 +168,8 @@
 <script src="/t/boutique/datos.js"></script>
 <script src="/core/util.js"></script>
 <script src="/core/api.js"></script>
+<script src="/core/planes.js"></script>
+<script src="/core/instalar.js"></script>
 <script src="/core/mascotas.js"></script>
 <script src="/core/campos.js"></script>
 <script src="/core/qr.js"></script>

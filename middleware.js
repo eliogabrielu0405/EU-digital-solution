@@ -3,7 +3,7 @@
    sus robots se le responde una página corta con el nombre, la descripción y la imagen del
    negocio. Las personas siguen de largo hacia la página normal. */
 
-export const config = { matcher: ["/", "/t/:plantilla", "/t/:plantilla/"] };
+export const config = { matcher: ["/", "/t/:plantilla", "/t/:plantilla/", "/registro", "/registro/"] };
 
 // Robots que arman vistas previas de enlaces. No incluye buscadores (esos sí ejecutan la página)
 // ni navegadores dentro de apps como Instagram o Facebook, que son personas.
@@ -97,6 +97,15 @@ async function vistaPrevia(request) {
     });
   }
 
+  if (/^\/registro\/?$/.test(url.pathname)) {
+    return responder({
+      titulo: "Crea tu página de pedidos y pruébala gratis",
+      descripcion: "Eliges la plantilla, pones los datos de tu negocio y tu página queda en línea. Sin tarjeta: al terminar la prueba eliges tu plan.",
+      imagen: origen + "/img/compartir.jpg", ancho: 1200, alto: 630, tipoImagen: "image/jpeg",
+      url: origen + "/registro/", sitio: C.marca, abrir: "/registro/index.html" + url.search, cache: 3600,
+    });
+  }
+
   if (plantilla && PLANTILLAS[plantilla]) {
     const p = PLANTILLAS[plantilla];
     return responder({
@@ -107,8 +116,8 @@ async function vistaPrevia(request) {
   }
 
   return responder({
-    titulo: C.marca + ": páginas de pedidos por WhatsApp",
-    descripcion: "Tu menú o tu catálogo en línea, con pedidos directo a tu WhatsApp. Cambias precios, fotos y la tasa del día desde tu teléfono.",
+    titulo: C.marca + ": tu página de pedidos por WhatsApp",
+    descripcion: "Tu menú o tu catálogo en línea, con pedidos directo a tu WhatsApp. Pruébala gratis: cambias precios, fotos y la tasa del día desde tu teléfono.",
     imagen: origen + "/img/compartir.jpg", ancho: 1200, alto: 630, tipoImagen: "image/jpeg",
     url: origen + "/", sitio: C.marca, abrir: "/index.html", cache: 3600,
   });
